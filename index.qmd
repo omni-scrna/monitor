@@ -11,6 +11,15 @@ editor_options:
 ```{r}
 #| echo: false
 ORG <- "omni-scrna"
+WINDOW_HOURS <- 48
+NUM_LATEST <- 2 # limit: number of commits per author/repo
+
+# helper functions
+.datemod <- function(u) as.POSIXct(u, format = "%Y-%m-%dT%H:%M:%SZ", 
+                                   tz = "UTC") 
+.datechr <- function(u) .datemod(u) %>% 
+  format("%d.%m.%Y (%H:%M)", tz = "Europe/Zurich")
+.null2na <- function(u) ifelse(is.null(u), NA, u)
 ```
 
 ```{r}
@@ -21,8 +30,12 @@ ORG <- "omni-scrna"
 library(dplyr)
 library(gh)
 
-.token <- Sys.getenv("GITHUB_TOKEN")
-nchar(.token)
+# if local, get token from file; o/w from ENV on GA
+.token <- ifelse(Sys.getenv("GITHUB_ACTIONS") == "true",
+                 Sys.getenv("GITHUB_TOKEN"),
+                 read.table("~/.credentials",sep="=")$V2)
+
+stopifnot(nzchar(.token))
 
 repos <- gh(paste0("/orgs/", ORG, "/repos"),
             .token = .token,
@@ -32,12 +45,13 @@ repos <- sapply(repos, .subset2, "html_url")
 # data.frame(repos = repos)
 ```
 
-## Quick summary: `r ORG`
+Updated: `r .datechr(Sys.time())` <br>
 
-In this [`r ORG`](`r dirname(repos)[1]`) organization, you have [`r length(repos)` repositories](`r paste0("https://github.com/orgs/", ORG, "/repositories")`). 
+## Quick summary
 
-## List of open PRs: `r ORG`
+In this [`r ORG`](`r dirname(repos)[1]`) organization, you have [`r length(repos)` repositories](`r paste0("https://github.com/orgs/", ORG, "/repositories")`):<br>`r paste0("[", basename(repos), "](", repos, ") ")`. 
 
+## List of open PRs
 
 ```{r}
 #| echo: false
@@ -55,25 +69,68 @@ for(i in 1:length(repos)) {
   open_prs <- c(open_prs, prs)
 }
 
+# basic setup for kable
 parse_pr_info <- function(u) {
-  time_utc <- as.POSIXct(u$updated_at, 
-                         format = "%Y-%m-%dT%H:%M:%SZ", 
-                         tz = "UTC")
-
   data.frame(repo = paste0("[", basename(u$base$repo$url), "](",
                            u$base$repo$svn_url, ")"),
              sender = u$user$login,
              title = u$title,
              pr = paste0("[", basename(u$html_url), "](", u$html_url, ")",
                          ifelse(u$draft, " [DRAFT]","")),
-             last_update = format(time_utc, "%d.%m.%Y (%H:%M)", 
-                                  tz = "Europe/Zurich"))
+             last_update = .datechr(u$updated_at))
 }
 
 prs_df <- lapply(open_prs, parse_pr_info) %>% 
   bind_rows() %>%
   arrange(last_update)
+
 prs_df
+
+```
+
+
+## Active branches (last `r WINDOW_HOURS` hours)
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+cmts_df <- data.frame()
+for(i in 1:length(repos)) {
+  branches <- gh("/repos/:owner/:repo/branches", owner = ORG, 
+                 repo = basename(repos[i]), .token = .token)
+  for(j in 1:length(branches)) {
+    ctr <- gh("/repos/:owner/:repo/commits?sha=:sha",
+              owner = ORG, repo = basename(repos[i]), per_page = NUM_LATEST,
+              sha = branches[[j]]$name, .token = .token)
+    commits_df <- data.frame(author = sapply(ctr, 
+                                             function(u) .null2na(u$committer$login)),
+                             repo = paste0("[", basename(repos[i]), "](", repos[i], ")"),
+                             branch = paste0("[", branches[[j]]$name, "](",
+                                             repos[i],"/tree/", branches[[j]]$name, ")"),
+                             message = sapply(ctr, 
+                                            function(u) paste0("[", substr(u$commit$message, 1, 40),
+                                                               "](", u$html_url, ")")),
+                             date = sapply(ctr, function(u) .datemod(u$commit$author$date))
+                             ) %>%
+    filter(!is.na(author), date >= as.POSIXct(Sys.time()-WINDOW_HOURS*60*60, 
+                                              tz="Europe/Zurich")) %>%
+    mutate(date = .datechr(date))
+  cmts_df <- rbind(cmts_df, commits_df)
+    
+  }
+}
+
+
+cmts_df %>% 
+  arrange(desc(date)) %>%
+  group_by(author, repo) %>% 
+  slice_head(n = NUM_LATEST) %>%
+  ungroup %>%
+  arrange(desc(date))
+
+
 ```
 
 
