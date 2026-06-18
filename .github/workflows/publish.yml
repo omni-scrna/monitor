@@ -31,6 +31,10 @@ jobs:
             any::dplyr
             any::gh
 
+      - uses: r-lib/actions/setup-renv@v2
+        with:
+          cache-version: 1
+
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
@@ -41,7 +45,7 @@ jobs:
         #  GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Make Pages entrypoint
-        run: cp report.html index.html
+        run: cp project-monitor.html index.html
 
       - name: Publish to gh-pages
         uses: quarto-dev/quarto-actions/publish@v2
