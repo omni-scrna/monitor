@@ -22,10 +22,10 @@ library(dplyr)
 library(gh)
 
 .token <- Sys.getenv("GITHUB_TOKEN")
-nchar(token)
+nchar(.token)
 
 repos <- gh(paste0("/orgs/", ORG, "/repos"),
-            .token = cred[["GITHUB_TOKEN"]],
+            .token = .token,
             .limit = 1000)
 repos <- sapply(repos, .subset2, "html_url")
 
@@ -51,7 +51,7 @@ for(i in 1:length(repos)) {
             owner = "omni-scrna", 
             repo = basename(repos[i]),
             state = "open", per_page = 100,
-            .token = cred[["GITHUB_TOKEN"]])
+            .token = .token)
   open_prs <- c(open_prs, prs)
 }
 
