@@ -34,20 +34,11 @@ jobs:
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
-      - name: Render QMD
-        run: quarto render project-monitor.qmd --to html
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        #  GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Make Pages entrypoint
-        run: cp project-monitor.html index.html
-
-      - name: Publish to gh-pages
+      - name: Publish index.qmd
         uses: quarto-dev/quarto-actions/publish@v2
         with:
           target: gh-pages
-          path: .
+          path: index.qmd
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
