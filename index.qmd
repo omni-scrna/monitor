@@ -110,7 +110,9 @@ for(i in 1:length(repos)) {
                              branch = paste0("[", branches[[j]]$name, "](",
                                              repos[i],"/tree/", branches[[j]]$name, ")"),
                              message = sapply(ctr, 
-                                            function(u) paste0("[", substr(u$commit$message, 1, 40),
+                                            function(u) paste0("[", 
+                                                               substr(gsub("\n", " ", 
+                                                                           u$commit$message), 1, 40),
                                                                "](", u$html_url, ")")),
                              date = sapply(ctr, function(u) .datemod(u$commit$author$date))
                              ) %>%
@@ -134,3 +136,712 @@ cmts_df %>%
 ```
 
 
+
+<!-- ```{r projects} -->
+
+<!-- query <- ' -->
+<!-- query($login: String!, $number: Int!, $n: Int!) { -->
+<!--   organization(login: $login) @include(if: false) { -->
+<!--     projectV2(number: $number) { id } -->
+<!--   } -->
+
+<!--   org: organization(login: $login) { -->
+<!--     projectV2(number: $number) { -->
+<!--       id -->
+<!--       title -->
+<!--       items(first: $n) { -->
+<!--         nodes { -->
+<!--           id -->
+<!--           updatedAt -->
+<!--           type -->
+<!--           fieldValueByName(name: "Status") { -->
+<!--             __typename -->
+<!--             ... on ProjectV2ItemFieldSingleSelectValue { -->
+<!--               name -->
+<!--             } -->
+<!--           } -->
+<!--           content { -->
+<!--             __typename -->
+<!--             ... on DraftIssue { -->
+<!--               title -->
+<!--               body -->
+<!--             } -->
+<!--             ... on Issue { -->
+<!--               title -->
+<!--               number -->
+<!--               state -->
+<!--               url -->
+<!--             } -->
+<!--             ... on PullRequest { -->
+<!--               title -->
+<!--               number -->
+<!--               state -->
+<!--               url -->
+<!--             } -->
+<!--           } -->
+<!--         } -->
+<!--       } -->
+<!--     } -->
+<!--   } -->
+
+<!--   usr: user(login: $login) { -->
+<!--     projectV2(number: $number) { -->
+<!--       id -->
+<!--       title -->
+<!--       items(first: $n) { -->
+<!--         nodes { -->
+<!--           id -->
+<!--           updatedAt -->
+<!--           type -->
+<!--           fieldValueByName(name: "Status") { -->
+<!--             __typename -->
+<!--             ... on ProjectV2ItemFieldSingleSelectValue { -->
+<!--               name -->
+<!--             } -->
+<!--           } -->
+<!--           content { -->
+<!--             __typename -->
+<!--             ... on DraftIssue { -->
+<!--               title -->
+<!--               body -->
+<!--             } -->
+<!--             ... on Issue { -->
+<!--               title -->
+<!--               number -->
+<!--               state -->
+<!--               url -->
+<!--             } -->
+<!--             ... on PullRequest { -->
+<!--               title -->
+<!--               number -->
+<!--               state -->
+<!--               url -->
+<!--             } -->
+<!--           } -->
+<!--         } -->
+<!--       } -->
+<!--     } -->
+<!--   } -->
+<!-- } -->
+<!-- ' -->
+
+<!-- res <- gh_gql( -->
+<!--   query, -->
+<!--   login = "omni-scrna", -->
+<!--   number = 1L, -->
+<!--   n = 20L -->
+<!-- ) -->
+
+
+
+
+<!-- library(ghql) -->
+<!-- library(jsonlite) -->
+
+<!-- # Create the client -->
+<!-- cli <- GraphqlClient$new( -->
+<!--   url = "https://api.github.com/graphql", -->
+<!--   headers = list(Authorization = paste0("Bearer ", .token)) -->
+<!-- ) -->
+
+<!-- # Define your query -->
+<!-- qry <- Query$new() -->
+<!-- qry$query('myProjects', '{ -->
+<!--   viewer { -->
+<!--     projectsV2(first: 10) { -->
+<!--       items { -->
+<!--         title -->
+<!--         id -->
+<!--         url -->
+<!--       } -->
+<!--     } -->
+<!--   } -->
+<!-- }') -->
+
+<!-- # Execute -->
+<!-- result <- cli$exec(qry$queries$myProjects) -->
+<!-- result <- fromJSON(result, flatten = TRUE) -->
+
+
+
+
+
+<!-- #!/usr/bin/env Rscript -->
+
+<!-- # GitHub Projects V2 example with R + ghql -->
+<!-- # Requires: GITHUB_TOKEN in your environment -->
+
+<!-- suppressPackageStartupMessages({ -->
+<!--   library(ghql) -->
+<!--   library(jsonlite) -->
+<!--   library(dplyr) -->
+<!--   library(tidyr) -->
+<!--   library(purrr) -->
+<!--   library(tibble) -->
+<!--   library(stringr) -->
+<!-- }) -->
+
+<!-- token <- Sys.getenv("GITHUB_TOKEN") -->
+<!-- if (identical(token, "")) { -->
+<!--   stop("Set GITHUB_TOKEN before running, e.g. Sys.setenv(GITHUB_TOKEN = 'ghp_...')") -->
+<!-- } -->
+
+<!-- # ---- user parameters --------------------------------------------------------- -->
+<!-- owner_login <- "markrobinsonuzh"     # e.g. "your-user" or "your-org" -->
+<!-- owner_type  <- "omni-scrna"         # "organization" or "user" -->
+<!-- project_num <- 1L                     # Project V2 number shown in the URL -->
+<!-- items_first <- 50L                    # page size per request -->
+<!-- # ------------------------------------------------------------------------------ -->
+
+<!-- con <- GraphqlClient$new( -->
+<!--   url = "https://api.github.com/graphql", -->
+<!--   headers = list(Authorization = paste0("Bearer ", .token)) -->
+<!-- ) -->
+
+<!-- qry <- Query$new() -->
+
+<!-- qry$query( -->
+<!--   "project_items", -->
+<!--   ' -->
+<!-- query ProjectItems($login: String!, $number: Int!, $itemsFirst: Int!, $itemsAfter: String) { -->
+<!--   rateLimit { -->
+<!--     limit -->
+<!--     cost -->
+<!--     remaining -->
+<!--     resetAt -->
+<!--   } -->
+
+<!--   organization(login: $login) @include(if: false) { -->
+<!--     __typename -->
+<!--   } -->
+
+<!--   user(login: $login) @include(if: false) { -->
+<!--     __typename -->
+<!--   } -->
+
+<!--   owner: repositoryOwner(login: $login) { -->
+<!--     __typename -->
+<!--     login -->
+<!--     ... on Organization { -->
+<!--       projectV2(number: $number) { -->
+<!--         id -->
+<!--         title -->
+<!--         url -->
+<!--         closed -->
+<!--         fields(first: 50) { -->
+<!--           nodes { -->
+<!--             __typename -->
+<!--             ... on ProjectV2FieldCommon { -->
+<!--               id -->
+<!--               name -->
+<!--             } -->
+<!--             ... on ProjectV2IterationField { -->
+<!--               id -->
+<!--               name -->
+<!--               configuration { -->
+<!--                 iterations { -->
+<!--                   id -->
+<!--                   title -->
+<!--                   startDate -->
+<!--                   duration -->
+<!--                 } -->
+<!--               } -->
+<!--             } -->
+<!--             ... on ProjectV2SingleSelectField { -->
+<!--               id -->
+<!--               name -->
+<!--               options { -->
+<!--                 id -->
+<!--                 name -->
+<!--               } -->
+<!--             } -->
+<!--           } -->
+<!--         } -->
+<!--         items(first: $itemsFirst, after: $itemsAfter) { -->
+<!--           pageInfo { -->
+<!--             hasNextPage -->
+<!--             endCursor -->
+<!--           } -->
+<!--           nodes { -->
+<!--             id -->
+<!--             type -->
+<!--             isArchived -->
+<!--             createdAt -->
+<!--             updatedAt -->
+
+<!--             content { -->
+<!--               __typename -->
+<!--               ... on Issue { -->
+<!--                 id -->
+<!--                 number -->
+<!--                 title -->
+<!--                 url -->
+<!--                 state -->
+<!--                 repository { nameWithOwner } -->
+<!--                 assignees(first: 20) { nodes { login } } -->
+<!--                 labels(first: 20) { nodes { name } } -->
+<!--               } -->
+<!--               ... on PullRequest { -->
+<!--                 id -->
+<!--                 number -->
+<!--                 title -->
+<!--                 url -->
+<!--                 state -->
+<!--                 repository { nameWithOwner } -->
+<!--                 assignees(first: 20) { nodes { login } } -->
+<!--                 labels(first: 20) { nodes { name } } -->
+<!--               } -->
+<!--               ... on DraftIssue { -->
+<!--                 id -->
+<!--                 title -->
+<!--                 body -->
+<!--               } -->
+<!--             } -->
+
+<!--             fieldValues(first: 50) { -->
+<!--               nodes { -->
+<!--                 __typename -->
+
+<!--                 ... on ProjectV2ItemFieldTextValue { -->
+<!--                   text -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldNumberValue { -->
+<!--                   number -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldDateValue { -->
+<!--                   date -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldSingleSelectValue { -->
+<!--                   name -->
+<!--                   optionId -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldIterationValue { -->
+<!--                   title -->
+<!--                   iterationId -->
+<!--                   startDate -->
+<!--                   duration -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldMilestoneValue { -->
+<!--                   milestone { -->
+<!--                     id -->
+<!--                     title -->
+<!--                     dueOn -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldRepositoryValue { -->
+<!--                   repository { -->
+<!--                     id -->
+<!--                     nameWithOwner -->
+<!--                     url -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldReviewerValue { -->
+<!--                   reviewers(first: 20) { -->
+<!--                     nodes { -->
+<!--                       __typename -->
+<!--                       ... on User { login } -->
+<!--                       ... on Team { slug name } -->
+<!--                     } -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldUserValue { -->
+<!--                   users(first: 20) { -->
+<!--                     nodes { login } -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldLabelValue { -->
+<!--                   labels(first: 20) { -->
+<!--                     nodes { name } -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldPullRequestValue { -->
+<!--                   pullRequests(first: 20) { -->
+<!--                     nodes { -->
+<!--                       number -->
+<!--                       title -->
+<!--                       url -->
+<!--                     } -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldIssueValue { -->
+<!--                   issues(first: 20) { -->
+<!--                     nodes { -->
+<!--                       number -->
+<!--                       title -->
+<!--                       url -->
+<!--                     } -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+<!--               } -->
+<!--             } -->
+<!--           } -->
+<!--         } -->
+<!--       } -->
+<!--     } -->
+
+<!--     ... on User { -->
+<!--       projectV2(number: $number) { -->
+<!--         id -->
+<!--         title -->
+<!--         url -->
+<!--         closed -->
+<!--         fields(first: 50) { -->
+<!--           nodes { -->
+<!--             __typename -->
+<!--             ... on ProjectV2FieldCommon { -->
+<!--               id -->
+<!--               name -->
+<!--             } -->
+<!--             ... on ProjectV2IterationField { -->
+<!--               id -->
+<!--               name -->
+<!--               configuration { -->
+<!--                 iterations { -->
+<!--                   id -->
+<!--                   title -->
+<!--                   startDate -->
+<!--                   duration -->
+<!--                 } -->
+<!--               } -->
+<!--             } -->
+<!--             ... on ProjectV2SingleSelectField { -->
+<!--               id -->
+<!--               name -->
+<!--               options { -->
+<!--                 id -->
+<!--                 name -->
+<!--               } -->
+<!--             } -->
+<!--           } -->
+<!--         } -->
+<!--         items(first: $itemsFirst, after: $itemsAfter) { -->
+<!--           pageInfo { -->
+<!--             hasNextPage -->
+<!--             endCursor -->
+<!--           } -->
+<!--           nodes { -->
+<!--             id -->
+<!--             type -->
+<!--             isArchived -->
+<!--             createdAt -->
+<!--             updatedAt -->
+
+<!--             content { -->
+<!--               __typename -->
+<!--               ... on Issue { -->
+<!--                 id -->
+<!--                 number -->
+<!--                 title -->
+<!--                 url -->
+<!--                 state -->
+<!--                 repository { nameWithOwner } -->
+<!--                 assignees(first: 20) { nodes { login } } -->
+<!--                 labels(first: 20) { nodes { name } } -->
+<!--               } -->
+<!--               ... on PullRequest { -->
+<!--                 id -->
+<!--                 number -->
+<!--                 title -->
+<!--                 url -->
+<!--                 state -->
+<!--                 repository { nameWithOwner } -->
+<!--                 assignees(first: 20) { nodes { login } } -->
+<!--                 labels(first: 20) { nodes { name } } -->
+<!--               } -->
+<!--               ... on DraftIssue { -->
+<!--                 id -->
+<!--                 title -->
+<!--                 body -->
+<!--               } -->
+<!--             } -->
+
+<!--             fieldValues(first: 50) { -->
+<!--               nodes { -->
+<!--                 __typename -->
+
+<!--                 ... on ProjectV2ItemFieldTextValue { -->
+<!--                   text -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldNumberValue { -->
+<!--                   number -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldDateValue { -->
+<!--                   date -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldSingleSelectValue { -->
+<!--                   name -->
+<!--                   optionId -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldIterationValue { -->
+<!--                   title -->
+<!--                   iterationId -->
+<!--                   startDate -->
+<!--                   duration -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldMilestoneValue { -->
+<!--                   milestone { -->
+<!--                     id -->
+<!--                     title -->
+<!--                     dueOn -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldRepositoryValue { -->
+<!--                   repository { -->
+<!--                     id -->
+<!--                     nameWithOwner -->
+<!--                     url -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldReviewerValue { -->
+<!--                   reviewers(first: 20) { -->
+<!--                     nodes { -->
+<!--                       __typename -->
+<!--                       ... on User { login } -->
+<!--                       ... on Team { slug name } -->
+<!--                     } -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldUserValue { -->
+<!--                   users(first: 20) { -->
+<!--                     nodes { login } -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldLabelValue { -->
+<!--                   labels(first: 20) { -->
+<!--                     nodes { name } -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldPullRequestValue { -->
+<!--                   pullRequests(first: 20) { -->
+<!--                     nodes { -->
+<!--                       number -->
+<!--                       title -->
+<!--                       url -->
+<!--                     } -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+
+<!--                 ... on ProjectV2ItemFieldIssueValue { -->
+<!--                   issues(first: 20) { -->
+<!--                     nodes { -->
+<!--                       number -->
+<!--                       title -->
+<!--                       url -->
+<!--                     } -->
+<!--                   } -->
+<!--                   field { ... on ProjectV2FieldCommon { id name } } -->
+<!--                 } -->
+<!--               } -->
+<!--             } -->
+<!--           } -->
+<!--         } -->
+<!--       } -->
+<!--     } -->
+<!--   } -->
+<!-- } -->
+<!-- ' -->
+<!-- ) -->
+
+<!-- exec_query <- function(after = NULL) { -->
+<!--   variables <- list( -->
+<!--     login = owner_login, -->
+<!--     number = as.integer(project_num), -->
+<!--     itemsFirst = as.integer(items_first), -->
+<!--     itemsAfter = after -->
+<!--   ) -->
+<!--   res <- con$exec(qry$queries$project_items, variables = variables) -->
+<!--   jsonlite::fromJSON(res, simplifyVector = FALSE) -->
+<!-- } -->
+
+<!-- project_from_response <- function(x) { -->
+<!--   owner <- x$data$owner -->
+<!--   if (is.null(owner)) stop("Owner not found. Check login/token scopes.") -->
+<!--   owner$projectV2 -->
+<!-- } -->
+
+<!-- flatten_field_value <- function(fv) { -->
+<!--   typename <- fv$`__typename` -->
+<!--   field_name <- purrr::pluck(fv, "field", "name", .default = NA_character_) -->
+
+<!--   value <- switch( -->
+<!--     typename, -->
+<!--     ProjectV2ItemFieldTextValue = fv$text %||% NA_character_, -->
+<!--     ProjectV2ItemFieldNumberValue = if (!is.null(fv$number)) as.character(fv$number) else NA_character_, -->
+<!--     ProjectV2ItemFieldDateValue = fv$date %||% NA_character_, -->
+<!--     ProjectV2ItemFieldSingleSelectValue = fv$name %||% NA_character_, -->
+<!--     ProjectV2ItemFieldIterationValue = fv$title %||% NA_character_, -->
+<!--     ProjectV2ItemFieldMilestoneValue = purrr::pluck(fv, "milestone", "title", .default = NA_character_), -->
+<!--     ProjectV2ItemFieldRepositoryValue = purrr::pluck(fv, "repository", "nameWithOwner", .default = NA_character_), -->
+<!--     ProjectV2ItemFieldReviewerValue = { -->
+<!--       nodes <- purrr::pluck(fv, "reviewers", "nodes", .default = list()) -->
+<!--       vals <- purrr::map_chr(nodes, function(n) { -->
+<!--         if (identical(n$`__typename`, "User")) n$login else paste0("team:", n$slug %||% n$name) -->
+<!--       }) -->
+<!--       paste(vals, collapse = "; ") -->
+<!--     }, -->
+<!--     ProjectV2ItemFieldUserValue = { -->
+<!--       nodes <- purrr::pluck(fv, "users", "nodes", .default = list()) -->
+<!--       paste(purrr::map_chr(nodes, "login"), collapse = "; ") -->
+<!--     }, -->
+<!--     ProjectV2ItemFieldLabelValue = { -->
+<!--       nodes <- purrr::pluck(fv, "labels", "nodes", .default = list()) -->
+<!--       paste(purrr::map_chr(nodes, "name"), collapse = "; ") -->
+<!--     }, -->
+<!--     ProjectV2ItemFieldPullRequestValue = { -->
+<!--       nodes <- purrr::pluck(fv, "pullRequests", "nodes", .default = list()) -->
+<!--       paste(purrr::map_chr(nodes, ~ paste0("#", .x$number, " ", .x$title)), collapse = "; ") -->
+<!--     }, -->
+<!--     ProjectV2ItemFieldIssueValue = { -->
+<!--       nodes <- purrr::pluck(fv, "issues", "nodes", .default = list()) -->
+<!--       paste(purrr::map_chr(nodes, ~ paste0("#", .x$number, " ", .x$title)), collapse = "; ") -->
+<!--     }, -->
+<!--     NA_character_ -->
+<!--   ) -->
+
+<!--   tibble( -->
+<!--     field_name = field_name, -->
+<!--     field_type = typename, -->
+<!--     field_value = value -->
+<!--   ) -->
+<!-- } -->
+
+<!-- `%||%` <- function(x, y) if (is.null(x) || length(x) == 0) y else x -->
+
+<!-- flatten_item <- function(item) { -->
+<!--   content <- item$content -->
+<!--   content_type <- content$`__typename` %||% NA_character_ -->
+
+<!--   base <- tibble( -->
+<!--     item_id = item$id %||% NA_character_, -->
+<!--     item_type = item$type %||% NA_character_, -->
+<!--     archived = item$isArchived %||% FALSE, -->
+<!--     created_at = item$createdAt %||% NA_character_, -->
+<!--     updated_at = item$updatedAt %||% NA_character_, -->
+<!--     content_type = content_type, -->
+<!--     content_id = content$id %||% NA_character_, -->
+<!--     content_number = if (!is.null(content$number)) as.integer(content$number) else NA_integer_, -->
+<!--     title = content$title %||% NA_character_, -->
+<!--     url = content$url %||% NA_character_, -->
+<!--     state = content$state %||% NA_character_, -->
+<!--     repository = purrr::pluck(content, "repository", "nameWithOwner", .default = NA_character_), -->
+<!--     assignees = paste(purrr::map_chr(purrr::pluck(content, "assignees", "nodes", .default = list()), "login"), collapse = "; "), -->
+<!--     labels = paste(purrr::map_chr(purrr::pluck(content, "labels", "nodes", .default = list()), "name"), collapse = "; ") -->
+<!--   ) -->
+
+<!--   field_values <- purrr::pluck(item, "fieldValues", "nodes", .default = list()) -->
+<!--   if (length(field_values) == 0) return(base) -->
+
+<!--   fv_long <- purrr::map_dfr(field_values, flatten_field_value) %>% -->
+<!--     filter(!is.na(field_name), field_name != "") -->
+
+<!--   if (nrow(fv_long) == 0) return(base) -->
+
+<!--   fv_wide <- fv_long %>% -->
+<!--     group_by(field_name) %>% -->
+<!--     summarise(field_value = paste(unique(na.omit(field_value)), collapse = " | "), .groups = "drop") %>% -->
+<!--     tidyr::pivot_wider(names_from = field_name, values_from = field_value) -->
+
+<!--   bind_cols(base, fv_wide) -->
+<!-- } -->
+
+<!-- all_items <- list() -->
+<!-- after <- NULL -->
+<!-- page <- 1L -->
+<!-- project_meta <- NULL -->
+<!-- rate_limit <- NULL -->
+
+<!-- repeat { -->
+<!--   res <- exec_query(after) -->
+<!--   if (!is.null(res$errors)) { -->
+<!--     stop(toJSON(res$errors, auto_unbox = TRUE, pretty = TRUE)) -->
+<!--   } -->
+
+<!--   rate_limit <- res$data$rateLimit -->
+<!--   project <- project_from_response(res) -->
+<!--   if (is.null(project)) stop("Project not found. Check project number and whether the token can see it.") -->
+
+<!--   if (is.null(project_meta)) { -->
+<!--     project_meta <- tibble( -->
+<!--       owner_login = owner_login, -->
+<!--       owner_kind = res$data$owner$`__typename` %||% NA_character_, -->
+<!--       project_id = project$id %||% NA_character_, -->
+<!--       project_title = project$title %||% NA_character_, -->
+<!--       project_url = project$url %||% NA_character_, -->
+<!--       project_closed = project$closed %||% FALSE -->
+<!--     ) -->
+<!--   } -->
+
+<!--   nodes <- purrr::pluck(project, "items", "nodes", .default = list()) -->
+<!--   all_items[[page]] <- purrr::map_dfr(nodes, flatten_item) -->
+
+<!--   page_info <- project$items$pageInfo -->
+<!--   if (isFALSE(page_info$hasNextPage)) break -->
+
+<!--   after <- page_info$endCursor -->
+<!--   page <- page + 1L -->
+<!-- } -->
+
+<!-- items_tbl <- bind_rows(all_items) %>% -->
+<!--   mutate( -->
+<!--     owner_login = owner_login, -->
+<!--     project_number = project_num -->
+<!--   ) %>% -->
+<!--   relocate(owner_login, project_number, everything()) -->
+
+<!-- cat("\nProject metadata:\n") -->
+<!-- print(project_meta) -->
+
+<!-- cat("\nItems preview:\n") -->
+<!-- print(utils::head(items_tbl, 10)) -->
+
+<!-- cat("\nRate limit:\n") -->
+<!-- print(as_tibble(rate_limit)) -->
+
+<!-- # Optional write-out -->
+<!-- # readr::write_csv(items_tbl, "github_project_items.csv") -->
+
+<!-- ``` -->
