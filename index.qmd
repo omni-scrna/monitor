@@ -136,6 +136,31 @@ cmts_df %>%
 ```
 
 
+## Last commit (to `main`) for each repo
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+df_list <- list()
+for(i in 1:length(repos)) {
+  ctr <- gh("GET /repos/{owner}/{repo}/commits",
+            owner = ORG, repo = basename(repos[i]),
+            sha = "main", .token = .token, per_page = 1)[[1]]
+  hsh <- ctr$sha
+  df_list[[i]] <- data.frame(author = ctr$committer$login,
+                             repo = paste0("[", basename(repos[i]), "](", repos[i], ")"),
+                             date = .datemod(ctr$commit$author$date),
+                             hash = paste0(substr(hsh, 1, 7)))
+} 
+
+bind_rows(df_list) %>%
+  mutate(date = .datechr(date))
+
+```
+
+
 
 <!-- ```{r projects} -->
 
