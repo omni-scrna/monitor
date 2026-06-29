@@ -156,7 +156,8 @@ for(i in 1:length(repos)) {
 } 
 
 bind_rows(df_list) %>%
-  mutate(date = .datechr(date))
+  mutate(date = .datechr(date)) %>%
+  arrange(desc(date))
 
 ```
 
