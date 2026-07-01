@@ -8,7 +8,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r}
+```{r helpers-setup}
 #| echo: false
 ORG <- "omni-scrna"
 WINDOW_HOURS <- 48
@@ -22,7 +22,7 @@ NUM_LATEST <- 2 # limit: number of commits per author/repo
 .null2na <- function(u) ifelse(is.null(u), NA, u)
 ```
 
-```{r}
+```{r get-repos}
 #| echo: false
 #| warning: false
 #| message: false
@@ -53,7 +53,7 @@ In this [`r ORG`](`r dirname(repos)[1]`) organization, you have [`r length(repos
 
 ## List of open PRs
 
-```{r}
+```{r open-prs}
 #| echo: false
 #| warning: false
 #| message: false
@@ -91,7 +91,7 @@ prs_df
 
 ## Active branches (last `r WINDOW_HOURS` hours)
 
-```{r}
+```{r active-branches}
 #| echo: false
 #| warning: false
 #| message: false
@@ -138,7 +138,7 @@ cmts_df %>%
 
 ## Last commit (to `main`) for each repo
 
-```{r}
+```{r last-to-main}
 #| echo: false
 #| warning: false
 #| message: false
