@@ -149,8 +149,10 @@ for(i in 1:length(repos)) {
             owner = ORG, repo = basename(repos[i]),
             sha = "main", .token = .token, per_page = 1)[[1]]
   hsh <- ctr$sha
-  df_list[[i]] <- data.frame(author = ctr$committer$login,
-                             repo = paste0("[", basename(repos[i]), "](", repos[i], ")"),
+  login <- ctr$committer$login
+  df_list[[i]] <- data.frame(author = ifelse(is.null(login), "", login),
+                             repo = paste0("[", basename(repos[i]), "](",
+                                           repos[i], ")"),
                              date = .datemod(ctr$commit$author$date),
                              hash = paste0(substr(hsh, 1, 7)))
 } 
