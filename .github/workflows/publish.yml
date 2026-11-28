@@ -3,10 +3,8 @@ on:
   push:
     branches: main
   schedule:
-    # 2-3 daytime updates (UTC times - adjust to your timezone)
-    - cron: '0 3 * * *'       # 5:00 AM CET
-    - cron: '0 10 * * *'      # 12:00 PM CET
-    - cron: '0 13 * * *'      # 3:00 PM CET
+    # multiple daytime updates
+    - cron: '42 5,7,9,11,13,15,17 * * *'
 
 name: Quarto Publish
 
@@ -35,6 +33,7 @@ jobs:
             any::httr2
             any::dplyr
             any::gh
+            any::DT
 
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2

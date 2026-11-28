@@ -10,6 +10,7 @@ editor_options:
 
 ```{r helpers-setup}
 #| echo: false
+library(DT)
 ORG <- "omni-scrna"
 WINDOW_HOURS <- 48
 NUM_LATEST <- 2 # limit: number of commits per author/repo
@@ -17,8 +18,15 @@ NUM_LATEST <- 2 # limit: number of commits per author/repo
 # helper functions
 .datemod <- function(u) as.POSIXct(u, format = "%Y-%m-%dT%H:%M:%SZ", 
                                    tz = "UTC") 
-.datechr <- function(u) .datemod(u) %>% 
-  format("%d.%m.%Y (%H:%M)", tz = "Europe/Zurich")
+# .datechr <- function(u) .datemod(u) %>% 
+#   format("%d.%m.%Y (%H:%M)", tz = "Europe/Zurich")
+.datechr <- function(u) .datemod(u) %>%
+  format("%Y-%m-%d %H:%M", tz = "Europe/Zurich")
+.link <- function(text, url)
+  sprintf('<a href="%s">%s</a>', url, htmltools::htmlEscape(text))
+.table <- function(df)
+  DT::datatable(df, escape = FALSE, rownames = FALSE, filter = "top",
+                options = list(pageLength = 10, order = list()))
 .null2na <- function(u) ifelse(is.null(u), NA, u)
 ```
 
@@ -69,22 +77,30 @@ for(i in 1:length(repos)) {
   open_prs <- c(open_prs, prs)
 }
 
-# basic setup for kable
 parse_pr_info <- function(u) {
-  data.frame(repo = paste0("[", basename(u$base$repo$url), "](",
-                           u$base$repo$svn_url, ")"),
+  data.frame(repo = .link(basename(u$base$repo$url), u$base$repo$svn_url),
              sender = u$user$login,
-             title = u$title,
-             pr = paste0("[", basename(u$html_url), "](", u$html_url, ")",
-                         ifelse(u$draft, " [DRAFT]","")),
+             title = htmltools::htmlEscape(u$title),
+             pr = paste0(.link(basename(u$html_url), u$html_url),
+                         ifelse(u$draft, " [DRAFT]", "")),
              last_update = .datechr(u$updated_at))
 }
+# basic setup for kable
+# parse_pr_info <- function(u) {
+#   data.frame(repo = paste0("[", basename(u$base$repo$url), "](",
+#                            u$base$repo$svn_url, ")"),
+#              sender = u$user$login,
+#              title = u$title,
+#              pr = paste0("[", basename(u$html_url), "](", u$html_url, ")",
+#                          ifelse(u$draft, " [DRAFT]","")),
+#              last_update = .datechr(u$updated_at))
+# }
 
 prs_df <- lapply(open_prs, parse_pr_info) %>% 
   bind_rows() %>%
   arrange(last_update)
 
-prs_df
+.table(prs_df)
 
 ```
 
@@ -106,14 +122,19 @@ for(i in 1:length(repos)) {
               sha = branches[[j]]$name, .token = .token)
     commits_df <- data.frame(author = sapply(ctr, 
                                              function(u) .null2na(u$committer$login)),
-                             repo = paste0("[", basename(repos[i]), "](", repos[i], ")"),
-                             branch = paste0("[", branches[[j]]$name, "](",
-                                             repos[i],"/tree/", branches[[j]]$name, ")"),
-                             message = sapply(ctr, 
-                                            function(u) paste0("[", 
-                                                               substr(gsub("\n", " ", 
-                                                                           u$commit$message), 1, 40),
-                                                               "](", u$html_url, ")")),
+                             repo = .link(basename(repos[i]), repos[i]),
+                             branch = .link(branches[[j]]$name,
+                                            paste0(repos[i], "/tree/", branches[[j]]$name)),
+                             message = sapply(ctr, function(u)
+                               .link(substr(gsub("\n", " ", u$commit$message), 1, 40), u$html_url)),
+                             # repo = paste0("[", basename(repos[i]), "](", repos[i], ")"),
+                             # branch = paste0("[", branches[[j]]$name, "](",
+                             #                 repos[i],"/tree/", branches[[j]]$name, ")"),
+                             # message = sapply(ctr, 
+                             #                function(u) paste0("[", 
+                             #                                   substr(gsub("\n", " ", 
+                             #                                               u$commit$message), 1, 40),
+                             #                                   "](", u$html_url, ")")),
                              date = sapply(ctr, function(u) .datemod(u$commit$author$date))
                              ) %>%
     filter(!is.na(author), date >= as.POSIXct(Sys.time()-WINDOW_HOURS*60*60, 
@@ -130,7 +151,8 @@ cmts_df %>%
   group_by(author, repo) %>% 
   slice_head(n = NUM_LATEST) %>%
   ungroup %>%
-  arrange(desc(date))
+  arrange(desc(date)) %>%
+  .table()
 
 
 ```
@@ -151,15 +173,17 @@ for(i in 1:length(repos)) {
   hsh <- ctr$sha
   login <- ctr$committer$login
   df_list[[i]] <- data.frame(author = ifelse(is.null(login), "", login),
-                             repo = paste0("[", basename(repos[i]), "](",
-                                           repos[i], ")"),
+                             # repo = paste0("[", basename(repos[i]), "](",
+                             #               repos[i], ")"),
+                             repo = .link(basename(repos[i]), repos[i]),
                              date = .datemod(ctr$commit$author$date),
                              hash = paste0(substr(hsh, 1, 7)))
 } 
 
 bind_rows(df_list) %>%
   mutate(date = .datechr(date)) %>%
-  arrange(desc(date))
+  arrange(desc(date)) %>%
+  .table()
 
 ```
 
